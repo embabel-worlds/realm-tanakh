@@ -1,0 +1,163 @@
+# The realm's answer surface.
+#
+# References are as a reader writes them, unqualified — `Genesis 1:1`, matched against `ref` — and
+# in HEBREW numbering, because that is the Tanakh's. A reader with a King James reference in hand uses
+# FromKingJames, which finds the Tanakh verse by `kjvRefs`. Every reading view returns the Hebrew
+# beside the English.
+#
+# Views that cross scriptures are not here: they read only the vocabulary's parent labels, so they
+# live in realm-scripture-vocabulary and answer from whatever is installed.
+
+- name: TanakhBooks
+  description: The thirty-nine books in Hebrew order — Torah, Nevi'im (Prophets), Ketuvim (Writings) — with their Hebrew names and how many chapters and verses each holds.
+  params:
+    section:
+      type: string
+      default: ""
+      description: "One part: `torah`, `neviim` or `ketuvim`; empty for all three."
+  cypher: |
+    MATCH (b:TanakhBook)
+    WHERE $section = '' OR b.section = $section
+    RETURN b.bookOrder AS order, b.section AS section, b.name AS book, b.hebrewName AS hebrewName,
+           b.transliteratedName AS transliterated, b.chapterCount AS chapters, b.verseCount AS verses
+    ORDER BY order
+
+- name: ReadTanakhVerse
+  description: One verse of the Tanakh by reference in Hebrew numbering, in pointed Hebrew and JPS 1917 English, with its parashah (in the Torah) and the King James verse that holds the same text.
+  params:
+    ref:
+      type: string
+      default: "Genesis 1:1"
+      description: "The verse in Hebrew numbering, e.g. `Genesis 1:1`, `Exodus 21:37`, `Psalms 51:3`, `Malachi 3:23`."
+  cypher: |
+    MATCH (v:TanakhVerse {ref: $ref})
+    RETURN v.name AS reference, v.original AS hebrew, v.text AS english, v.parashah AS parashah,
+           v.kjvRefs AS kingJames
+
+- name: ReadTanakhChapter
+  description: A whole chapter of the Tanakh, verse by verse, in Hebrew and JPS 1917 English, in Hebrew numbering.
+  params:
+    book:
+      type: string
+      default: "Genesis"
+      description: "The book as the King James names it, e.g. `Isaiah`, `1 Samuel`, `Psalms` — but `Song of Songs`. TanakhBooks lists them."
+    chapter:
+      type: int
+      default: 1
+      description: "The chapter, in Hebrew numbering."
+  cypher: |
+    MATCH (b:TanakhBook {name: $book})<-[:IN]-(c:TanakhChapter {chapter: $chapter})<-[:IN]-(v:TanakhVerse)
+    RETURN v.verse AS verse, v.original AS hebrew, v.text AS english, v.kjvRefs AS kingJames
+    ORDER BY verse
+
+- name: FromKingJames
+  description: The Tanakh verse that holds a King James verse's text, found by the King James reference — Exodus 22:1 in the King James is Tanakh Exodus 21:37, Malachi 4:5 is Malachi 3:23.
+  params:
+    ref:
+      type: string
+      default: "Exodus 22:1"
+      description: "A King James reference in Genesis–Malachi, e.g. `Exodus 22:1`, `Psalms 51:1`, `Song of Solomon 6:13`."
+  cypher: |
+    MATCH (v:TanakhVerse) WHERE $ref IN v.kjvRefs
+    RETURN v.name AS tanakhReference, v.original AS hebrew, v.text AS english, v.kjvRefs AS kingJames
+
+- name: NumberingDifferences
+  description: Every verse whose Hebrew number differs from the King James's, in order, with the King James reference it corresponds to — where the two traditions divide the text differently. A psalm's title, which the King James does not number, shows an empty King James list.
+  params:
+    book:
+      type: string
+      default: "Exodus"
+      description: "One book, e.g. `Exodus`, `Psalms`, `Malachi`; empty for the whole Tanakh (over a thousand verses, most of them in the Psalms)."
+    limit:
+      type: int
+      default: 500
+      description: "How many verses to return."
+  cypher: |
+    MATCH (b:TanakhBook)<-[:IN]-(:TanakhChapter)<-[:IN]-(v:TanakhVerse)
+    WHERE ($book = '' OR b.name = $book) AND v.kjvRefs <> [v.ref]
+    RETURN b.name AS book, v.ref AS hebrew, v.kjvRefs AS kingJames, v.text AS english
+    ORDER BY v.ordinal
+    LIMIT $limit
+
+- name: Parashot
+  description: The fifty-four weekly Torah portions in order, with their Hebrew names, where each begins and ends, and how many verses each holds.
+  cypher: |
+    MATCH (p:Parashah)<-[:IN_PORTION]-(v:TanakhVerse)
+    RETURN p.number AS number, p.name AS parashah, p.hebrewName AS hebrewName,
+           p.startsAt AS startsAt, p.endsAt AS endsAt, count(v) AS verses
+    ORDER BY number
+
+- name: ReadParashah
+  description: One weekly Torah portion's verses in order, in Hebrew and JPS 1917 English.
+  params:
+    parashah:
+      type: string
+      default: "Bereshit"
+      description: "The portion's name as Sefaria spells it, e.g. `Bereshit`, `Lech Lecha`, `Yitro`. Parashot lists them."
+    limit:
+      type: int
+      default: 200
+      description: "How many verses to return; a portion holds 30 to 176."
+  cypher: |
+    MATCH (p:Parashah {name: $parashah})<-[:IN_PORTION]-(v:TanakhVerse)
+    RETURN v.ref AS reference, v.original AS hebrew, v.text AS english
+    ORDER BY v.ordinal
+    LIMIT $limit
+
+- name: SearchTanakh
+  description: Tanakh verses whose JPS 1917 English contains a word or phrase, case-insensitively, in order, with the Hebrew beside each. Matches inside words — `goat` also finds `goats`. Optionally one section.
+  params:
+    term:
+      type: string
+      default: "goat"
+      description: "The word or phrase to find, in English. JPS 1917 is close to the King James: `thee`, `hath`."
+    section:
+      type: string
+      default: ""
+      description: "`torah`, `neviim` or `ketuvim`; empty for the whole Tanakh."
+    limit:
+      type: int
+      default: 100
+      description: "How many verses to return."
+  cypher: |
+    MATCH (v:TanakhVerse)
+    WHERE toLower(v.text) CONTAINS toLower($term) AND ($section = '' OR v.section = $section)
+    RETURN v.ref AS reference, v.section AS section, v.text AS english, v.original AS hebrew
+    ORDER BY v.ordinal
+    LIMIT $limit
+
+- name: SearchHebrew
+  description: Tanakh verses whose Hebrew contains a word or phrase typed without vowel points, in order. Searches the unpointed text and shows the pointed.
+  params:
+    term:
+      type: string
+      default: "שעיר"
+      description: "Hebrew without vowel points, e.g. `שעיר` (goat), `שלום` (peace)."
+    limit:
+      type: int
+      default: 100
+      description: "How many verses to return."
+  cypher: |
+    MATCH (v:TanakhVerse)
+    WHERE v.hebrewPlain CONTAINS $term
+    RETURN v.ref AS reference, v.original AS hebrew, v.text AS english
+    ORDER BY v.ordinal
+    LIMIT $limit
+
+- name: TanakhBesideKingJames
+  description: A Tanakh chapter verse by verse beside the King James verses that hold the same text, through CORRESPONDS_TO — where the numberings part, the pairing shows it, and a psalm's title stands alone. Needs realm-bible.
+  params:
+    book:
+      type: string
+      default: "Malachi"
+      description: "The book, e.g. `Malachi`, `Psalms`, `Exodus`."
+    chapter:
+      type: int
+      default: 3
+      description: "The chapter, in Hebrew numbering."
+  cypher: |
+    MATCH (b:TanakhBook {name: $book})<-[:IN]-(c:TanakhChapter {chapter: $chapter})<-[:IN]-(t:TanakhVerse)
+    OPTIONAL MATCH (t)-[:CORRESPONDS_TO]->(k:BibleVerse)
+    WITH t, k ORDER BY t.verse, k.ordinal
+    RETURN t.verse AS verse, t.ref AS tanakh, t.text AS jps, collect(k.name) AS kingJames, collect(k.text) AS kjv
+    ORDER BY verse

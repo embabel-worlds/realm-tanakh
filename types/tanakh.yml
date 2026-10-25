@@ -1,0 +1,102 @@
+# The Tanakh as a graph: five STORED types, children of the scripture vocabulary.
+#
+#   Mikra ◀─IN─ TanakhBook ◀─IN─ TanakhChapter ◀─IN─ TanakhVerse ─IN_PORTION─▶ Parashah
+#   (HolyBook)  (ScriptureBook)  (ScriptureChapter)  (Verse)                   (ReadingPortion)
+#
+# Seeded from reference/, which scripts/build_reference.py builds; it never changes.
+#
+# NUMBERING IS HEBREW. Chapter and verse are the Tanakh's own, never the King James's: Exodus 21:37
+# here is Exodus 22:1 there, a psalm's title is its verse 1, and Malachi 3:19 is the King James's
+# 4:1. `kjvRefs` names the King James verse or verses with the same text — usually one; several for
+# a Hebrew verse the King James divides, as each Decalogue's "Thou shalt not murder … bear false
+# witness"; none for a psalm's title, which the King James prints unnumbered — and
+# rules/corresponds.yml draws CORRESPONDS_TO from it when realm-bible is installed. Nothing is
+# renumbered to line up.
+#
+# REFERENCES ARE QUALIFIED. The book names are the Bible's, so `name` is `Tanakh Genesis 1:1`: a view
+# that reads every Verse looks verses up by `name`, and must not get the Bible's and the Tanakh's for
+# one string. `ref` is the reference as a reader writes it, `Genesis 1:1`, unique within this realm.
+#
+# No type is called `Tanakh`: that is this realm's provenance label (realmLabel), so
+# `MATCH (v:Tanakh:Verse)` asks this scripture alone, and a type that shared it is refused at load.
+# The holy book is the Mikra — the scripture as it is read, the Hebrew word the Tanakh names.
+
+- name: Mikra
+  parents: [HolyBook]
+  userAnchor: false
+  description: "The Tanakh as one holy book — Torah, Nevi'im and Ketuvim, a single node, `scripture: 'tanakh'`. Its thirty-nine books are IN it."
+  properties:
+    scripture:
+      identity: true
+      description: "Always `tanakh`. Identity."
+    textSource: "Where the texts come from: Sefaria — JPS 1917, and the Westminster Leningrad Codex as tanach.us publishes it."
+
+- name: TanakhBook
+  parents: [ScriptureBook]
+  userAnchor: false
+  description: >-
+    One of the thirty-nine books, in Hebrew order (`bookOrder`): the Torah, Genesis to Deuteronomy;
+    the Nevi'im, Joshua to Malachi with the Twelve; the Ketuvim, Psalms to 2 Chronicles. `name` is the
+    King James's (`1 Samuel`), except the `Song of Songs`. IN the Mikra; its chapters are IN it.
+  properties:
+    osis:
+      identity: true
+      description: "OSIS book abbreviation, e.g. `Gen`, `1Sam`, `Ps`. Identity."
+    section: "The part of the Tanakh: `torah`, `neviim` (the Prophets) or `ketuvim` (the Writings)."
+    hebrewName: "The book's name in Hebrew, as Sefaria gives it, e.g. `בראשית`, `תהילים`."
+    transliteratedName: "The Hebrew name transliterated, e.g. `Bereshit`, `Tehillim`, `Shmuel Alef`."
+    chapterCount:
+      type: int
+      description: "Chapters in the book, in Hebrew numbering."
+    verseCount:
+      type: int
+      description: "Verses in the book, in Hebrew numbering."
+
+- name: TanakhChapter
+  parents: [ScriptureChapter]
+  userAnchor: false
+  description: "A chapter of the Tanakh in Hebrew numbering. `name` is qualified, e.g. `Tanakh Psalms 23`. IN its book; its verses are IN it."
+  properties:
+    osis:
+      identity: true
+      description: "OSIS chapter reference, e.g. `Ps.23`. Identity."
+    book: "OSIS book abbreviation, e.g. `Ps`."
+    section: "`torah`, `neviim` or `ketuvim`."
+
+- name: TanakhVerse
+  parents: [Verse]
+  userAnchor: false
+  description: >-
+    One verse of the Tanakh, in Hebrew numbering. `text` is the JPS 1917 English; `original` is the
+    Hebrew with vowel points; `hebrewPlain` is the same without them, for searching. `name` is
+    qualified, e.g. `Tanakh Psalms 23:1`; `ref` is `Psalms 23:1`. Search English with
+    toLower(v.text) CONTAINS 'goat', Hebrew with v.hebrewPlain CONTAINS 'שעיר'. `kjvRefs` lists the
+    King James verse or verses with the same text; it differs from `[ref]` wherever the numberings
+    part, most of all in the Psalms, whose titles are verses here. IN its TanakhChapter; a verse of
+    the Torah is also IN_PORTION its Parashah.
+  properties:
+    osis:
+      identity: true
+      description: "OSIS verse reference in Hebrew numbering, e.g. `Exod.21.37`. Identity."
+    ref: "The reference as a reader writes it, unqualified, e.g. `Exodus 21:37`. Unique within the Tanakh."
+    book: "OSIS book abbreviation, e.g. `Exod`."
+    section: "`torah`, `neviim` or `ketuvim`."
+    hebrewPlain: "The verse in Hebrew without vowel points or cantillation, for search."
+    parashah: "The weekly portion the verse is read in, e.g. `Bereshit`. Only on verses of the Torah."
+    kjvRefs:
+      cardinality: LIST
+      description: "The King James verse or verses holding the same text, e.g. `[Exodus 22:1]` for Exodus 21:37; empty for a psalm's title. Usually just the verse's own `ref`."
+    kjvOsis:
+      cardinality: LIST
+      description: "The same King James verses as OSIS references, e.g. `[Exod.22.1]` — realm-bible's BibleVerse identity, which CORRESPONDS_TO joins on because it is indexed and `name` is not."
+
+- name: Parashah
+  parents: [ReadingPortion]
+  userAnchor: false
+  description: "One of the fifty-four weekly portions the Torah is read in through the year, e.g. `Bereshit` (Genesis 1:1–6:8). Each verse of the Torah is IN_PORTION its parashah."
+  properties:
+    key:
+      identity: true
+      description: "The portion's name as a slug, e.g. `bereshit`, `lech-lecha`. Identity."
+    hebrewName: "The portion's name in Hebrew, e.g. `בראשית`."
+    endsAt: "The reference of the portion's last verse, e.g. `Tanakh Genesis 6:8`."

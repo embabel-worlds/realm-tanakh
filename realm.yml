@@ -1,0 +1,35 @@
+name: realm-tanakh
+description: |
+  The Tanakh — the Hebrew Bible, Torah, Prophets and Writings — as a graph you can query. Every
+  verse is stored with three texts: the Hebrew with vowel points, the same Hebrew unpointed for
+  searching, and the JPS 1917 English. Read a verse or a chapter, search in English or Hebrew,
+  browse the thirty-nine books in Hebrew order, and walk the fifty-four weekly Torah portions.
+
+  Numbering is Hebrew, the Tanakh's own: a psalm's title is its first verse, and Malachi has
+  three chapters. Each verse names the King James verse that holds the same text, and with
+  realm-bible installed the two are joined by CORRESPONDS_TO, so any chapter can be read beside
+  its King James rendering however the two number it.
+
+  A child of the scripture vocabulary: a TanakhVerse is a Verse, so a question asked of every
+  scripture is answered here too. Keyless. Nothing to configure. Texts public domain, from
+  Sefaria.
+version: 0.2.0
+# Experimental: its types are children of realm-scripture-vocabulary, which is itself experimental.
+# 0.2.0 grew realm-torah (0.1.0, the five books) into the whole Tanakh, under this new name.
+maturity: experimental
+url: https://github.com/embabel-worlds/realm-tanakh
+author: Rod Johnson
+realmLabel: Tanakh
+tags:
+  - tanakh
+  - torah
+  - scripture
+  - judaism
+  - hebrew
+  - reference
+exports:
+  - Mikra
+  - TanakhBook
+  - TanakhChapter
+  - TanakhVerse
+  - Parashah

@@ -1,0 +1,33 @@
+# DERIVE rule set: each Tanakh verse and the King James verse that holds the same text.
+#
+# The vocabulary's CORRESPONDS_TO, declared by the realm that knows both numberings. The pairing is
+# STORED on the verse (`kjvOsis`, aligned and checked by scripts/build_reference.py against
+# realm-bible's own text), so the rule is a lookup, not an inference: where the Hebrew and the King
+# James number alike it pairs Genesis 1:1 with Genesis 1:1; where they part it pairs Exodus 21:37 with
+# Exodus 22:1, and Psalms 51:3 with Psalms 51:1, the Hebrew counting the psalm's two-verse title; a
+# Hebrew verse the King James divides pairs with every part; and a psalm's title, which the King
+# James does not number, pairs with nothing.
+#
+# It joins on `kjvOsis`, the BibleVerse's identity, not on `kjvRefs` against `name`: the identity is
+# indexed, so each verse is a lookup; `name` is not, and a key held in a variable (as UNWIND gives)
+# cannot be hash-joined, so it scans every Bible verse for every Tanakh verse — 85 s against 0.1 s.
+#
+# It needs realm-bible. Without it no BibleVerse is there to bind and the relationship is simply empty.
+# The direction is Tanakh → Bible; a query that does not care writes `-[:CORRESPONDS_TO]-`.
+
+name: tanakh/corresponds
+derives: CORRESPONDS_TO
+properties:
+  kind:
+    type: string
+    description: "What the correspondence is — `translation` (the same verse in two scriptures' English), `quotation` or `allusion` (one scripture drawing on another)."
+description: >-
+  A Tanakh verse CORRESPONDS_TO the King James verse or verses that hold the same text, in the King
+  James's own numbering — Tanakh Exodus 21:37 to Exodus 22:1, Tanakh Malachi 3:19 to Malachi 4:1.
+  Needs realm-bible.
+rules:
+  - derive: "(t)-[:CORRESPONDS_TO {kind: 'translation'}]->(b)"
+    from: |
+      MATCH (t:TanakhVerse)
+      UNWIND t.kjvOsis AS ref
+      MATCH (b:BibleVerse {osis: ref})
