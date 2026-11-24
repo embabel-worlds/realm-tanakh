@@ -1,8 +1,9 @@
 name: realm-tanakh
 description: |
-  The Tanakh — the Hebrew Bible, Torah, Prophets and Writings — as a graph you can query. Every
-  verse is stored with three texts: the Hebrew with vowel points, the same Hebrew unpointed for
-  searching, and the JPS 1917 English. Read a verse or a chapter, search in English or Hebrew,
+  Every verse of the Tanakh in Hebrew and the JPS 1917 English, in Hebrew numbering, with its King James counterpart.
+  The Hebrew Bible — Torah, Nevi'im (Prophets) and Ketuvim (Writings) — with three texts on every
+  verse: the Hebrew with vowel points, the same Hebrew unpointed for searching, and the JPS 1917
+  English. Read a verse or a chapter, search in English or Hebrew,
   browse the thirty-nine books in Hebrew order, and walk the fifty-four weekly Torah portions.
 
   Numbering is Hebrew, the Tanakh's own: a psalm's title is its first verse, and Malachi has
@@ -13,7 +14,11 @@ description: |
   A child of the scripture vocabulary: a TanakhVerse is a Verse, so a question asked of every
   scripture is answered here too. Keyless. Nothing to configure. Texts public domain, from
   Sefaria.
-version: 0.2.0
+version: 0.2.1
+# Its types are children of the scripture vocabulary's, which must be installed for them to load as
+# scripture. realm-bible is a companion, not a requirement: without it CORRESPONDS_TO is simply empty.
+requires:
+  scripture-vocabulary: "[0.3.0,1.0.0)"
 # Experimental: its types are children of realm-scripture-vocabulary, which is itself experimental.
 # 0.2.0 grew realm-torah (0.1.0, the five books) into the whole Tanakh, under this new name.
 maturity: experimental
