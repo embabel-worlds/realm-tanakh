@@ -24,7 +24,7 @@
 - name: Mikra
   parents: [HolyBook]
   userAnchor: false
-  description: "The Tanakh as one holy book — Torah, Nevi'im and Ketuvim, a single node, `scripture: 'tanakh'`. Its thirty-nine books are IN it."
+  description: "The Tanakh as one holy book — Torah, Nevi'im and Ketuvim — a single node, identified by `scripture: 'tanakh'`. Its books are IN it: thirty-nine as English Bibles divide them, the same text the tradition counts as twenty-four (the Twelve as one book; Samuel, Kings, Chronicles and Ezra–Nehemiah one each)."
   properties:
     scripture:
       identity: true
@@ -35,14 +35,17 @@
   parents: [ScriptureBook]
   userAnchor: false
   description: >-
-    One of the thirty-nine books, in Hebrew order (`bookOrder`): the Torah, Genesis to Deuteronomy;
-    the Nevi'im, Joshua to Malachi with the Twelve; the Ketuvim, Psalms to 2 Chronicles. `name` is the
-    King James's (`1 Samuel`), except the `Song of Songs`. IN the Mikra; its chapters are IN it.
+    One of the thirty-nine books, identified by its OSIS abbreviation `osis` (`Gen`, `1Sam`), in
+    Hebrew order (`bookOrder`): the Torah, Genesis to Deuteronomy; the Nevi'im, Joshua to Malachi
+    with the Twelve; the Ketuvim, Psalms to 2 Chronicles. `name` is the King James's (`1 Samuel`),
+    except the `Song of Songs`. IN the Mikra; its chapters are IN it.
   properties:
     osis:
       identity: true
       description: "OSIS book abbreviation, e.g. `Gen`, `1Sam`, `Ps`. Identity."
-    section: "The part of the Tanakh: `torah`, `neviim` (the Prophets) or `ketuvim` (the Writings)."
+    section:
+      values: [torah, neviim, ketuvim]
+      description: "The part of the Tanakh: `torah` (the Teaching), `neviim` (the Prophets) or `ketuvim` (the Writings), lower case."
     hebrewName: "The book's name in Hebrew, as Sefaria gives it, e.g. `בראשית`, `תהילים`."
     transliteratedName: "The Hebrew name transliterated, e.g. `Bereshit`, `Tehillim`, `Shmuel Alef`."
     chapterCount:
@@ -55,34 +58,56 @@
 - name: TanakhChapter
   parents: [ScriptureChapter]
   userAnchor: false
-  description: "A chapter of the Tanakh in Hebrew numbering. `name` is qualified, e.g. `Tanakh Psalms 23`. IN its book; its verses are IN it."
+  description: "One chapter of the Tanakh in Hebrew numbering, identified by `osis` (`Ps.23`). `name` is qualified, e.g. `Tanakh Psalms 23`, so it never collides with the Bible's. IN its book; its verses are IN it."
   properties:
     osis:
       identity: true
       description: "OSIS chapter reference, e.g. `Ps.23`. Identity."
     book: "OSIS book abbreviation, e.g. `Ps`."
-    section: "`torah`, `neviim` or `ketuvim`."
+    section:
+      values: [torah, neviim, ketuvim]
+      description: "The part of the Tanakh the chapter is in: `torah`, `neviim` or `ketuvim`, lower case."
 
 - name: TanakhVerse
   parents: [Verse]
   userAnchor: false
   description: >-
-    One verse of the Tanakh, in Hebrew numbering. `text` is the JPS 1917 English; `original` is the
-    Hebrew with vowel points; `hebrewPlain` is the same without them, for searching. `name` is
-    qualified, e.g. `Tanakh Psalms 23:1`; `ref` is `Psalms 23:1`. Search English with
-    toLower(v.text) CONTAINS 'goat', Hebrew with v.hebrewPlain CONTAINS 'שעיר'. `kjvRefs` lists the
-    King James verse or verses with the same text; it differs from `[ref]` wherever the numberings
-    part, most of all in the Psalms, whose titles are verses here. IN its TanakhChapter; a verse of
-    the Torah is also IN_PORTION its Parashah.
+    One verse of the Tanakh in Hebrew numbering, identified by `osis` (`Exod.21.37`); `ref` is the
+    reader's form, `Exodus 21:37`, and `name` the qualified one, `Tanakh Exodus 21:37`. `text` is
+    the JPS 1917 English; `original` the Hebrew with vowel points; `hebrewPlain` the same without
+    them, for searching. `kjvRefs` lists the King James verse or verses with the same text; it
+    differs from `[ref]` wherever the numberings part, most of all in the Psalms, whose titles are
+    verses here. IN its TanakhChapter; a verse of the Torah is also IN_PORTION its Parashah.
+  examples:
+    - q: "which verses of the Torah mention a goat, in Hebrew and English"
+      cypher: |
+        MATCH (v:TanakhVerse)
+        WHERE toLower(v.text) CONTAINS 'goat' AND v.section = 'torah'
+        RETURN v.ref AS reference, v.original AS hebrew, v.text AS english
+        ORDER BY v.ordinal
+        LIMIT 50
+    - q: "what is the Tanakh reference for King James Exodus 22:1"
+      cypher: |
+        MATCH (v:TanakhVerse)
+        WHERE 'Exodus 22:1' IN v.kjvRefs
+        RETURN v.name AS tanakh, v.kjvRefs AS kingJames, v.text AS english
+    - q: "read Malachi 3 beside the King James"
+      cypher: |
+        MATCH (:TanakhBook {name: 'Malachi'})<-[:IN]-(:TanakhChapter {chapter: 3})<-[:IN]-(t:TanakhVerse)
+        OPTIONAL MATCH (t)-[:CORRESPONDS_TO]->(k:Verse {scripture: 'bible'})
+        RETURN t.ref AS tanakh, t.text AS jps, k.name AS kingJames, k.text AS kjv
+        ORDER BY t.verse, k.ordinal
   properties:
     osis:
       identity: true
       description: "OSIS verse reference in Hebrew numbering, e.g. `Exod.21.37`. Identity."
     ref: "The reference as a reader writes it, unqualified, e.g. `Exodus 21:37`. Unique within the Tanakh."
     book: "OSIS book abbreviation, e.g. `Exod`."
-    section: "`torah`, `neviim` or `ketuvim`."
-    hebrewPlain: "The verse in Hebrew without vowel points or cantillation, for search."
-    parashah: "The weekly portion the verse is read in, e.g. `Bereshit`. Only on verses of the Torah."
+    section:
+      values: [torah, neviim, ketuvim]
+      description: "The part of the Tanakh the verse is in: `torah`, `neviim` or `ketuvim`, lower case."
+    hebrewPlain: "The verse in Hebrew without vowel points or cantillation, for search with CONTAINS."
+    parashah: "The weekly Torah portion the verse is read in, by name, e.g. `Bereshit`. Empty outside the Torah (Nevi'im and Ketuvim have no parashah)."
     kjvRefs:
       cardinality: LIST
       description: "The King James verse or verses holding the same text, e.g. `[Exodus 22:1]` for Exodus 21:37; empty for a psalm's title. Usually just the verse's own `ref`."
@@ -93,10 +118,15 @@
 - name: Parashah
   parents: [ReadingPortion]
   userAnchor: false
-  description: "One of the fifty-four weekly portions the Torah is read in through the year, e.g. `Bereshit` (Genesis 1:1–6:8). Each verse of the Torah is IN_PORTION its parashah."
+  description: "One of the fifty-four weekly portions (parashot) the Torah is read in on the Sabbath through the year, identified by `key` (`bereshit`) and named as Sefaria spells it, `Bereshit` (Genesis 1:1–6:8). In some years two are read together in one week. Each verse of the Torah is IN_PORTION its parashah."
+  examples:
+    - q: "which parashah is Exodus 20:1 read in"
+      cypher: |
+        MATCH (:TanakhVerse {ref: 'Exodus 20:1'})-[:IN_PORTION]->(p:Parashah)
+        RETURN p.name AS parashah, p.hebrewName AS hebrewName, p.startsAt AS startsAt, p.endsAt AS endsAt
   properties:
     key:
       identity: true
       description: "The portion's name as a slug, e.g. `bereshit`, `lech-lecha`. Identity."
     hebrewName: "The portion's name in Hebrew, e.g. `בראשית`."
-    endsAt: "The reference of the portion's last verse, e.g. `Tanakh Genesis 6:8`."
+    endsAt: "Not a date: the `name` of the portion's last verse, e.g. `Tanakh Genesis 6:8`."

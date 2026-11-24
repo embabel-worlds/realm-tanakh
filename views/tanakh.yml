@@ -9,12 +9,15 @@
 # live in realm-scripture-vocabulary and answer from whatever is installed.
 
 - name: TanakhBooks
-  description: The thirty-nine books in Hebrew order — Torah, Nevi'im (Prophets), Ketuvim (Writings) — with their Hebrew names and how many chapters and verses each holds.
+  description: >-
+    The Tanakh's books in Hebrew order, with Hebrew names, chapters and verses. Torah, Nevi'im
+    (Prophets), Ketuvim (Writings); thirty-nine rows as English Bibles divide them, not the
+    tradition's twenty-four, and only one section when `section` is given.
   params:
     section:
       type: string
       default: ""
-      description: "One part: `torah`, `neviim` or `ketuvim`; empty for all three."
+      description: "One part: `torah`, `neviim` or `ketuvim`, exactly; empty for all three."
   cypher: |
     MATCH (b:TanakhBook)
     WHERE $section = '' OR b.section = $section
@@ -23,19 +26,25 @@
     ORDER BY order
 
 - name: ReadTanakhVerse
-  description: One verse of the Tanakh by reference in Hebrew numbering, in pointed Hebrew and JPS 1917 English, with its parashah (in the Torah) and the King James verse that holds the same text.
+  description: >-
+    One Tanakh verse in pointed Hebrew and JPS 1917 English, by Hebrew reference. With its parashah
+    (in the Torah) and the King James verse that holds the same text. Hebrew numbering only: a King
+    James reference such as `Exodus 22:1` finds the wrong verse or none — use FromKingJames.
   params:
     ref:
       type: string
       default: "Genesis 1:1"
-      description: "The verse in Hebrew numbering, e.g. `Genesis 1:1`, `Exodus 21:37`, `Psalms 51:3`, `Malachi 3:23`."
+      description: "The verse in Hebrew numbering, unqualified and exact, e.g. `Genesis 1:1`, `Exodus 21:37`, `Psalms 51:3`, `Malachi 3:23`."
   cypher: |
     MATCH (v:TanakhVerse {ref: $ref})
     RETURN v.name AS reference, v.original AS hebrew, v.text AS english, v.parashah AS parashah,
            v.kjvRefs AS kingJames
 
 - name: ReadTanakhChapter
-  description: A whole chapter of the Tanakh, verse by verse, in Hebrew and JPS 1917 English, in Hebrew numbering.
+  description: >-
+    A whole Tanakh chapter, verse by verse, in Hebrew and JPS 1917 English. In Hebrew numbering
+    only, so a chapter the King James numbers differently (Malachi 4) is not here; one chapter per
+    call.
   params:
     book:
       type: string
@@ -51,18 +60,24 @@
     ORDER BY verse
 
 - name: FromKingJames
-  description: The Tanakh verse that holds a King James verse's text, found by the King James reference — Exodus 22:1 in the King James is Tanakh Exodus 21:37, Malachi 4:5 is Malachi 3:23.
+  description: >-
+    The Tanakh verse holding a King James verse's text, by its King James reference. Exodus
+    22:1 in the King James is Tanakh Exodus 21:37, Malachi 4:5 is Malachi 3:23. The Old Testament
+    only; a psalm's title, which the King James does not number, cannot be reached this way.
   params:
     ref:
       type: string
       default: "Exodus 22:1"
-      description: "A King James reference in Genesis–Malachi, e.g. `Exodus 22:1`, `Psalms 51:1`, `Song of Solomon 6:13`."
+      description: "A King James reference in Genesis–Malachi, exactly as the King James names it, e.g. `Exodus 22:1`, `Psalms 51:1`, `Song of Solomon 6:13`."
   cypher: |
     MATCH (v:TanakhVerse) WHERE $ref IN v.kjvRefs
     RETURN v.name AS tanakhReference, v.original AS hebrew, v.text AS english, v.kjvRefs AS kingJames
 
 - name: NumberingDifferences
-  description: Every verse whose Hebrew number differs from the King James's, in order, with the King James reference it corresponds to — where the two traditions divide the text differently. A psalm's title, which the King James does not number, shows an empty King James list.
+  description: >-
+    Verses whose Hebrew number differs from the King James's, with the KJV's. In
+    order, at most `limit` — where the two traditions divide the text differently. A psalm's title,
+    which the King James does not number, shows an empty King James list.
   params:
     book:
       type: string
@@ -80,7 +95,10 @@
     LIMIT $limit
 
 - name: Parashot
-  description: The fifty-four weekly Torah portions in order, with their Hebrew names, where each begins and ends, and how many verses each holds.
+  description: >-
+    The fifty-four weekly Torah portions: Hebrew names, bounds and verse counts. One row per
+    parashah in reading order; not the calendar — which week of a given year reads which, and which
+    are read together, is not here. No haftarot.
   cypher: |
     MATCH (p:Parashah)<-[:IN_PORTION]-(v:TanakhVerse)
     RETURN p.number AS number, p.name AS parashah, p.hebrewName AS hebrewName,
@@ -88,16 +106,18 @@
     ORDER BY number
 
 - name: ReadParashah
-  description: One weekly Torah portion's verses in order, in Hebrew and JPS 1917 English.
+  description: >-
+    One weekly Torah portion's verses in order, in Hebrew and JPS 1917 English. The Torah reading
+    only, at most `limit` verses; not the haftarah read from the Prophets beside it.
   params:
     parashah:
       type: string
       default: "Bereshit"
-      description: "The portion's name as Sefaria spells it, e.g. `Bereshit`, `Lech Lecha`, `Yitro`. Parashot lists them."
+      description: "The portion's name exactly as Sefaria spells it, e.g. `Bereshit`, `Lech Lecha`, `Yitro`. Parashot lists them."
     limit:
       type: int
       default: 200
-      description: "How many verses to return; a portion holds 30 to 176."
+      description: "At most this many verses; a portion holds 30 to 176."
   cypher: |
     MATCH (p:Parashah {name: $parashah})<-[:IN_PORTION]-(v:TanakhVerse)
     RETURN v.ref AS reference, v.original AS hebrew, v.text AS english
@@ -105,20 +125,23 @@
     LIMIT $limit
 
 - name: SearchTanakh
-  description: Tanakh verses whose JPS 1917 English contains a word or phrase, case-insensitively, in order, with the Hebrew beside each. Matches inside words — `goat` also finds `goats`. Optionally one section.
+  description: >-
+    Tanakh verses whose JPS 1917 English contains a word or phrase, with the Hebrew. Partial and
+    case-insensitive: it matches inside words, so `goat` also finds `goats`. In order, at most
+    `limit`, optionally one section; for the Hebrew, use SearchHebrew.
   params:
     term:
       type: string
       default: "goat"
-      description: "The word or phrase to find, in English. JPS 1917 is close to the King James: `thee`, `hath`."
+      description: "The word or phrase to find, in English; a partial match, ignoring case. JPS 1917 is close to the King James: `thee`, `hath`."
     section:
       type: string
       default: ""
-      description: "`torah`, `neviim` or `ketuvim`; empty for the whole Tanakh."
+      description: "`torah`, `neviim` or `ketuvim`, exactly; empty for the whole Tanakh."
     limit:
       type: int
       default: 100
-      description: "How many verses to return."
+      description: "At most this many verses."
   cypher: |
     MATCH (v:TanakhVerse)
     WHERE toLower(v.text) CONTAINS toLower($term) AND ($section = '' OR v.section = $section)
@@ -127,16 +150,19 @@
     LIMIT $limit
 
 - name: SearchHebrew
-  description: Tanakh verses whose Hebrew contains a word or phrase typed without vowel points, in order. Searches the unpointed text and shows the pointed.
+  description: >-
+    Tanakh verses whose Hebrew contains a word, typed without vowel points. Searches the unpointed
+    text and shows the pointed, in order, at most `limit`. A word typed with vowel points finds
+    nothing.
   params:
     term:
       type: string
       default: "שעיר"
-      description: "Hebrew without vowel points, e.g. `שעיר` (goat), `שלום` (peace)."
+      description: "Hebrew without vowel points, e.g. `שעיר` (goat), `שלום` (peace). A partial match: it also finds the letters inside longer words, with prefixes such as ו or ה."
     limit:
       type: int
       default: 100
-      description: "How many verses to return."
+      description: "At most this many verses."
   cypher: |
     MATCH (v:TanakhVerse)
     WHERE v.hebrewPlain CONTAINS $term
@@ -145,12 +171,15 @@
     LIMIT $limit
 
 - name: TanakhBesideKingJames
-  description: A Tanakh chapter verse by verse beside the King James verses that hold the same text, through CORRESPONDS_TO — where the numberings part, the pairing shows it, and a psalm's title stands alone. Needs realm-bible.
+  description: >-
+    A Tanakh chapter beside the King James verses that hold the same text. Verse by verse, through
+    CORRESPONDS_TO — where the numberings part, the pairing shows it, and a psalm's title stands
+    alone. Needs realm-bible: without it the King James columns are empty.
   params:
     book:
       type: string
       default: "Malachi"
-      description: "The book, e.g. `Malachi`, `Psalms`, `Exodus`."
+      description: "The book as TanakhBooks names it, exactly, e.g. `Malachi`, `Psalms`, `Exodus`, `Song of Songs`."
     chapter:
       type: int
       default: 3
