@@ -8,7 +8,7 @@ description: |
 
   Numbering is Hebrew, the Tanakh's own: a psalm's title is its first verse, and Malachi has
   three chapters. Each verse names the King James verse that holds the same text, and with
-  realm-bible installed the two are joined by CORRESPONDS_TO, so any chapter can be read beside
+  realm-bible, which it requires, the two are joined by CORRESPONDS_TO, so any chapter can be read beside
   its King James rendering however the two number it.
 
   A child of the scripture vocabulary: a TanakhVerse is a Verse, so a question asked of every
@@ -16,9 +16,11 @@ description: |
   Sefaria.
 version: 0.2.1
 # Its types are children of the scripture vocabulary's, which must be installed for them to load as
-# scripture. realm-bible is a companion, not a requirement: without it CORRESPONDS_TO is simply empty.
+# scripture. realm-bible is required too: the views that read a verse beside its King James name
+# BibleVerse, and a host refuses a view over a label no installed realm declares.
 requires:
   scripture-vocabulary: "[0.3.0,1.0.0)"
+  realm-bible: "[0.2.0,1.0.0)"
 # Experimental: its types are children of realm-scripture-vocabulary, which is itself experimental.
 # 0.2.0 grew realm-torah (0.1.0, the five books) into the whole Tanakh, under this new name.
 maturity: experimental
