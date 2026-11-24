@@ -94,7 +94,7 @@
     - q: "read Malachi 3 beside the King James"
       cypher: |
         MATCH (:TanakhBook {name: 'Malachi'})<-[:IN]-(:TanakhChapter {chapter: 3})<-[:IN]-(t:TanakhVerse)
-        OPTIONAL MATCH (t)-[:CORRESPONDS_TO]->(k:BibleVerse)
+        OPTIONAL MATCH (t)-[:CORRESPONDS_TO]->(k:Verse {scripture: 'bible'})
         RETURN t.ref AS tanakh, t.text AS jps, k.name AS kingJames, k.text AS kjv
         ORDER BY t.verse, k.ordinal
   properties:
